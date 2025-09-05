@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <!-- Резервная кнопка на случай, если MainButton не виден -->
+    <!-- Резервная кнопка, если MainButton не виден -->
     <button id="fallback" style="display:none">Отправить (если не видно нижней кнопки)</button>
   </div>
 
@@ -53,29 +53,22 @@
     const fbBtn = document.getElementById('fallback');
 
     function digits(s){ return (s||"").replace(/\D/g,''); }
-    function getVal(id){ return document.getElementById(id).value.trim(); }
+    const v = id => document.getElementById(id).value.trim();
 
     function send(){
-      const payload = {
-        name: getVal('name'),
-        phone: getVal('phone'),
-        model: getVal('model'),
-        problem: getVal('problem')
-      };
-      if(!payload.name)   return tg?.showAlert ? tg.showAlert("Укажите имя") : alert("Укажите имя");
-      if(digits(payload.phone).length < 7) return tg?.showAlert ? tg.showAlert("Похоже, телефон некорректный") : alert("Похоже, телефон некорректный");
-      if(!payload.model)  return tg?.showAlert ? tg.showAlert("Укажите модель") : alert("Укажите модель");
-      if(!payload.problem)return tg?.showAlert ? tg.showAlert("Опишите проблему") : alert("Опишите проблему");
+      const payload = { name: v('name'), phone: v('phone'), model: v('model'), problem: v('problem') };
+      if(!payload.name) return (tg?.showAlert ? tg.showAlert("Укажите имя") : alert("Укажите имя"));
+      if(digits(payload.phone).length < 7) return (tg?.showAlert ? tg.showAlert("Похоже, телефон некорректный") : alert("Похоже, телефон некорректный"));
+      if(!payload.model) return (tg?.showAlert ? tg.showAlert("Укажите модель") : alert("Укажите модель"));
+      if(!payload.problem) return (tg?.showAlert ? tg.showAlert("Опишите проблему") : alert("Опишите проблему"));
 
-      // Отправляем данные боту
       if(tg && tg.sendData){
         tg.sendData(JSON.stringify(payload));
       }else{
-        alert("Страница открыта вне Telegram, данные не могут быть отправлены. Откройте форму по кнопке внутри бота.");
+        alert("Страница открыта вне Telegram, данные не отправятся. Откройте форму из кнопки бота.");
       }
     }
 
-    // Инициализация WebApp
     if(tg){
       tg.ready();
       tg.expand();
@@ -86,7 +79,7 @@
       status.textContent = 'Ок: форма открыта внутри Telegram. Можно отправлять.';
     }else{
       status.className = 'warn';
-      status.textContent = 'Внимание: страница открыта НЕ внутри Telegram. Нажмите кнопку в боте, а не открывайте ссылку в браузере.';
+      status.textContent = 'Внимание: страница открыта НЕ внутри Telegram. Нажмите кнопку в боте, а не ссылку в браузере.';
       fbBtn.style.display = 'block';
       fbBtn.addEventListener('click', send);
     }
