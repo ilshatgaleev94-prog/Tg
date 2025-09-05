@@ -6,24 +6,27 @@
   <title>Заявка на ремонт</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 16px; }
-    .card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 6px 16px rgba(0,0,0,.08); }
-    label { display:block; font-size:14px; margin:10px 0 4px; color:#444; }
-    input, textarea {
-      width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:16px; box-sizing:border-box;
-    }
-    textarea { min-height: 90px; resize: vertical; }
-    .row { display:grid; grid-template-columns:1fr; gap:12px; }
-    .hint { font-size:12px; color:#777; margin-top:4px; }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;background:#f6f7f9}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 6px 16px rgba(0,0,0,.08)}
+    label{display:block;font-size:14px;margin:10px 0 4px;color:#444}
+    input,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:16px;box-sizing:border-box}
+    textarea{min-height:90px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    .hint{font-size:12px;color:#777;margin-top:4px}
+    .warn{margin-top:12px;padding:10px;border-radius:10px;background:#fff3cd;border:1px solid #ffecb5;color:#664d03}
+    .ok{margin-top:12px;padding:10px;border-radius:10px;background:#d1e7dd;border:1px solid #badbcc;color:#0f5132}
+    button{margin-top:12px;width:100%;padding:12px;border:0;border-radius:12px;font-size:16px}
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Оставить заявку</h2>
+    <div id="status" class="warn">Проверка окружения Telegram…</div>
+
     <div class="row">
       <div>
         <label>Имя</label>
-        <input id="name" placeholder="Иван" />
+        <input id="name" placeholder="Ильшат" />
       </div>
       <div>
         <label>Телефон</label>
@@ -36,35 +39,57 @@
       </div>
       <div>
         <label>Проблема</label>
-        <textarea id="problem" placeholder="Не запускается, мигает индикатор..."></textarea>
+        <textarea id="problem" placeholder="Не запускается, мигает индикатор…"></textarea>
       </div>
     </div>
+
+    <!-- Резервная кнопка на случай, если MainButton не виден -->
+    <button id="fallback" style="display:none">Отправить (если не видно нижней кнопки)</button>
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // развернуть на всю высоту
-    tg.MainButton.setText("Отправить заявку");
-    tg.MainButton.show();
+    const tg = window.Telegram?.WebApp;
+    const status = document.getElementById('status');
+    const fbBtn = document.getElementById('fallback');
 
     function digits(s){ return (s||"").replace(/\D/g,''); }
+    function getVal(id){ return document.getElementById(id).value.trim(); }
 
-    tg.onEvent('mainButtonClicked', () => {
+    function send(){
       const payload = {
-        name: document.getElementById('name').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        model: document.getElementById('model').value.trim(),
-        problem: document.getElementById('problem').value.trim()
+        name: getVal('name'),
+        phone: getVal('phone'),
+        model: getVal('model'),
+        problem: getVal('problem')
       };
+      if(!payload.name)   return tg?.showAlert ? tg.showAlert("Укажите имя") : alert("Укажите имя");
+      if(digits(payload.phone).length < 7) return tg?.showAlert ? tg.showAlert("Похоже, телефон некорректный") : alert("Похоже, телефон некорректный");
+      if(!payload.model)  return tg?.showAlert ? tg.showAlert("Укажите модель") : alert("Укажите модель");
+      if(!payload.problem)return tg?.showAlert ? tg.showAlert("Опишите проблему") : alert("Опишите проблему");
 
-      // Простая валидация
-      if (!payload.name) return tg.showAlert("Укажите имя");
-      if (digits(payload.phone).length < 7) return tg.showAlert("Похоже, телефон некорректный");
-      if (!payload.model) return tg.showAlert("Укажите модель");
-      if (!payload.problem) return tg.showAlert("Опишите проблему");
+      // Отправляем данные боту
+      if(tg && tg.sendData){
+        tg.sendData(JSON.stringify(payload));
+      }else{
+        alert("Страница открыта вне Telegram, данные не могут быть отправлены. Откройте форму по кнопке внутри бота.");
+      }
+    }
 
-      tg.sendData(JSON.stringify(payload)); // отправляем боту
-    });
+    // Инициализация WebApp
+    if(tg){
+      tg.ready();
+      tg.expand();
+      tg.MainButton.setText("Отправить заявку");
+      tg.MainButton.show();
+      tg.onEvent('mainButtonClicked', send);
+      status.className = 'ok';
+      status.textContent = 'Ок: форма открыта внутри Telegram. Можно отправлять.';
+    }else{
+      status.className = 'warn';
+      status.textContent = 'Внимание: страница открыта НЕ внутри Telegram. Нажмите кнопку в боте, а не открывайте ссылку в браузере.';
+      fbBtn.style.display = 'block';
+      fbBtn.addEventListener('click', send);
+    }
   </script>
 </body>
 </html>
